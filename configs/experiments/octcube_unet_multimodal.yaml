@@ -1,0 +1,14 @@
+defaults:
+  - ../octcube_base.yaml
+
+project:
+  experiment_name: octcube_unet_multimodal
+
+data:
+  modalities: [oct, octa, artery, vein]
+
+model:
+  fusion: concatenation
+  octcube:
+    train_mode: frozen
+

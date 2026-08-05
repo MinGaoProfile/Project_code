@@ -1,0 +1,12 @@
+defaults:
+  - ../base.yaml
+project:
+  experiment_name: diffusion_unet_oct_octa
+data:
+  modalities: [oct, octa]
+model:
+  name: diffusion_unet3d
+  diffusion_steps: 50
+  diffusion_loss_weight: 0.2
+  inference_steps: 8
+

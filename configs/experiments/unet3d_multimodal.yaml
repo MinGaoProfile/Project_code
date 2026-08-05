@@ -1,0 +1,9 @@
+defaults:
+  - ../base.yaml
+project:
+  experiment_name: unet3d_multimodal
+data:
+  modalities: [oct, octa, artery, vein]
+model:
+  name: unet3d
+

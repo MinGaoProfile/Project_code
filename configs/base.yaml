@@ -1,0 +1,93 @@
+project:
+  name: rnv_3d_segmentation
+  output_root: outputs
+  experiment_name: base
+
+seed: 42
+deterministic: true
+
+data:
+  dataset_root: ${RNV_DATASET_ROOT:-/path/to/RNV_dataset}
+  train_split: train_data
+  validation_split: null
+  test_split: test_data
+  vessel_map_dirs:
+    train_data: train_artery_vein_mask
+    test_data: test_artery_vein_mask
+  dataset_name: rnv_mat
+  strict_discovery: true
+  modalities: [oct]
+  mat_variables:
+    oct: imgMat
+    octa: imgMatAg
+    target: mask
+    segmentation: ManualCurveData
+  axis_order: [0, 1, 2]
+  normalize: percentile
+  percentile_range: [0.5, 99.5]
+  validation_fraction: 0.2
+  split_group: subject
+  split_version: v1
+  vessel_prior:
+    filename_suffix: _inner_octa_mask.png
+    artery_channel: 0
+    vein_channel: 1
+    depth_axis: 0
+    alignment: exact
+  patch_size: [64, 128, 128]
+  foreground_patch_probability: 0.7
+  samples_per_volume: 1
+  num_workers: 4
+  pin_memory: true
+
+model:
+  name: unet3d
+  in_channels: auto
+  out_channels: 1
+  base_channels: 16
+  levels: 4
+  dropout: 0.1
+
+loss:
+  components:
+    dice: 1.0
+    bce: 1.0
+  smooth: 1.0e-6
+
+optimizer:
+  name: adamw
+  learning_rate: 1.0e-4
+  weight_decay: 1.0e-5
+
+scheduler:
+  name: cosine
+  minimum_learning_rate: 1.0e-6
+
+training:
+  epochs: 200
+  batch_size: 1
+  gradient_accumulation_steps: 1
+  amp: true
+  gradient_clip_norm: 1.0
+  validate_every: 1
+  checkpoint_metric: dice
+  checkpoint_mode: max
+  early_stopping_patience: 30
+
+inference:
+  threshold: 0.5
+  sliding_window_overlap: 0.5
+  save_probabilities: false
+
+metrics:
+  voxel: [dice, iou, precision, recall, specificity]
+  lesion:
+    enabled: true
+    connectivity: 26
+    minimum_voxels: 3
+    match_iou: 0.1
+  volume:
+    voxel_spacing_mm: [1.0, 1.0, 1.0]
+  surface:
+    enabled: false
+    tolerance_mm: 0.05

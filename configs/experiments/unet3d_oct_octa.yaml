@@ -1,0 +1,9 @@
+defaults:
+  - ../base.yaml
+project:
+  experiment_name: unet3d_oct_octa
+data:
+  modalities: [oct, octa]
+model:
+  name: unet3d
+

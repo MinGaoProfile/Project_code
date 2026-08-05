@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rnv-segmentation"
+version = "0.1.0"
+description = "Config-driven multimodal 3D retinal neovascularization segmentation"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "Proprietary research code"}
+authors = [{name = "RNV Segmentation Team"}]
+dependencies = [
+  "torch>=2.6,<3",
+  "numpy>=1.26,<3",
+  "scipy>=1.12,<2",
+  "PyYAML>=6.0,<7",
+  "Pillow>=10,<13",
+  "tqdm>=4.66,<5",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8,<10",
+  "pytest-cov>=5,<8",
+  "ruff>=0.9,<1",
+]
+visualization = ["matplotlib>=3.8,<4", "tensorboard>=2.16,<3"]
+surface = ["scikit-image>=0.23,<1"]
+
+[project.scripts]
+rnv-train = "rnv_seg.cli:train_main"
+rnv-evaluate = "rnv_seg.cli:evaluate_main"
+rnv-infer = "rnv_seg.cli:infer_main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

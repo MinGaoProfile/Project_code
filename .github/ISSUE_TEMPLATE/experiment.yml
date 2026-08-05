@@ -1,0 +1,33 @@
+name: Experiment proposal
+description: Propose a controlled model, modality, loss, or preprocessing comparison
+title: "[Experiment]: "
+labels: [experiment]
+body:
+  - type: textarea
+    id: hypothesis
+    attributes:
+      label: Hypothesis
+    validations:
+      required: true
+  - type: dropdown
+    id: axis
+    attributes:
+      label: Primary changed axis
+      options: [Input modality, Model, Loss, Preprocessing, Augmentation, Patch size, Optimization, Initialization]
+    validations:
+      required: true
+  - type: textarea
+    id: controls
+    attributes:
+      label: Fixed controls and acceptance criteria
+      description: Include split version, seeds, metrics, and statistical comparison.
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: This issue contains no patient data, identifiers, private paths, or patient-derived figures.
+          required: true
+

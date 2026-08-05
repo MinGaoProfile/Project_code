@@ -1,0 +1,19 @@
+name: rnv-segmentation
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - numpy>=1.26
+  - scipy>=1.12
+  - pyyaml>=6
+  - pillow>=10
+  - tqdm>=4.66
+  - pytest>=8
+  - pip:
+      # Install the CUDA-specific PyTorch wheel first using the official selector,
+      # then install this repository with: pip install -e ".[dev,visualization]"
+      - -e .[dev,visualization]
+

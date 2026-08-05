@@ -1,0 +1,10 @@
+# Public example only. Copy to local.yaml and set a private path, or export
+# RNV_DATASET_ROOT. local.yaml is ignored by Git.
+data:
+  dataset_root: ${RNV_DATASET_ROOT:-/path/to/RNV_dataset}
+  train_split: train_data
+  validation_split: null
+  test_split: test_data
+  vessel_map_dirs:
+    train_data: train_artery_vein_mask
+    test_data: test_artery_vein_mask

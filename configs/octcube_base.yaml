@@ -1,0 +1,41 @@
+defaults:
+  - base.yaml
+
+model:
+  name: octcube_unet3d
+  out_channels: 1
+  base_channels: 16
+  levels: 4
+  dropout: 0.1
+  fusion: concatenation
+  attention_heads: 4
+  octcube:
+    backend: official
+    source_root: ${OCTCUBE_SOURCE_ROOT:-}
+    module: OCTCube.models_vit_st
+    model_name: vit_large_patch16
+    checkpoint: ${OCTCUBE_CHECKPOINT:-}
+    require_checkpoint: true
+    minimum_checkpoint_coverage: 0.90
+    train_mode: frozen
+    partial_unfreeze_blocks: 4
+    input_size: 256
+    num_frames: 64
+    patch_size: 16
+    temporal_patch_size: 2
+    embedding_dim: 1024
+    separate_position_embedding: true
+    class_token: true
+    # Dataset array [D,H,W] -> OCTCube [B-scan frames, axial, lateral].
+    # Confirm this mapping from acquisition metadata before production training.
+    axis_order: [2, 0, 1]
+    # Dataset percentile normalization first maps intensities to [0,1].
+    normalization: octcube_fixed
+    normalization_subtrahend: 0.25
+    normalization_divisor: 0.25
+    normalization_nonzero: true
+
+data:
+  # With axis_order [2,0,1], these map to OCTCube's temporal and width flips.
+  random_flip_axes: [1, 2]
+  random_flip_probability: 0.5

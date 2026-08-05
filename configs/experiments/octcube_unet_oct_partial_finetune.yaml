@@ -1,0 +1,15 @@
+defaults:
+  - ../octcube_base.yaml
+
+project:
+  experiment_name: octcube_unet_oct_partial_finetune
+
+data:
+  modalities: [oct]
+
+model:
+  fusion: concatenation
+  octcube:
+    train_mode: partial
+    partial_unfreeze_blocks: 4
+

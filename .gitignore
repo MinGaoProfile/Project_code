@@ -1,0 +1,92 @@
+# Medical and research data (never commit)
+/Dataset/
+/dataset/
+/data/
+/patient_data/
+/raw_data/
+/medical_images/
+/labels/
+/masks/
+**/Dataset/**
+**/patient_data/**
+**/raw_data/**
+**/medical_images/**
+**/labels/**
+**/masks/**
+*.nii
+*.nii.gz
+*.npy
+*.npz
+*.mat
+*.dcm
+*.dicom
+*.h5
+*.hdf5
+*.tif
+*.tiff
+
+# Synthetic fixtures are generated at test time; this exception is explicit
+!tests/synthetic_data/
+!tests/synthetic_data/.gitkeep
+
+# Experiment artifacts
+outputs/**
+!outputs/.gitkeep
+checkpoints/
+predictions/
+logs/
+runs/
+wandb/
+mlruns/
+lightning_logs/
+*.ckpt
+*.pth
+*.pt
+*.onnx
+events.out.tfevents.*
+
+# External OCTCube source checkout and gated multi-GB weights
+/OCTCubeM/
+
+# Local configuration and split manifests (may contain private paths/IDs)
+configs/data/local.yaml
+configs/data/local.yml
+*.local.yaml
+*.local.yml
+splits/
+manifests/
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+.venv/
+.venv-test/
+venv/
+env/
+.conda/
+
+# Jupyter and editors
+.ipynb_checkpoints/
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS / WSL / temporary files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.tmp
+*.temp
+*.bak
+*~
+.Trash-*

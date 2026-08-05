@@ -1,0 +1,27 @@
+name: Bug report
+description: Report a reproducible code problem without private data
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not attach patient data, identifiers, private paths, or patient-derived screenshots.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Synthetic reproduction
+      description: Provide a public-safe minimal example.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Python, PyTorch, CUDA, OS/WSL, and GPU model; remove hostnames and private paths.
+

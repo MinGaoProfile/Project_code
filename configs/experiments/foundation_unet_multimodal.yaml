@@ -1,0 +1,13 @@
+defaults:
+  - ../base.yaml
+project:
+  experiment_name: foundation_unet_multimodal
+data:
+  modalities: [oct, octa, artery, vein]
+model:
+  name: foundation_unet3d
+  foundation_checkpoint: ${RNV_FOUNDATION_CHECKPOINT:-}
+  require_foundation_checkpoint: true
+  freeze_encoder: true
+  minimum_checkpoint_coverage: 0.7
+

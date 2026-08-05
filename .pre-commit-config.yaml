@@ -1,0 +1,9 @@
+repos:
+  - repo: local
+    hooks:
+      - id: rnv-private-data-guard
+        name: Prevent medical data and experiment artifacts from entering Git
+        entry: python scripts/audit_repository.py --staged
+        language: system
+        pass_filenames: false
+
