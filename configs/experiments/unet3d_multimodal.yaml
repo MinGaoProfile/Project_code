@@ -3,7 +3,6 @@ defaults:
 project:
   experiment_name: unet3d_multimodal
 data:
-  modalities: [oct, octa, artery, vein]
+  modalities: [oct, octa, large_vessel]
 model:
   name: unet3d
-

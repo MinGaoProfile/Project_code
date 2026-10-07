@@ -29,7 +29,14 @@ class FoundationUNet3D(nn.Module):
         minimum_checkpoint_coverage: float = 0.7,
     ) -> None:
         super().__init__()
-        self.network = UNet3D(in_channels, out_channels, base_channels, levels, dropout)
+        self.network = UNet3D(
+            in_channels,
+            out_channels,
+            base_channels,
+            levels,
+            dropout,
+            residual_blocks=False,
+        )
         if foundation_checkpoint:
             self._load_encoder(foundation_checkpoint, minimum_checkpoint_coverage)
         elif require_foundation_checkpoint:

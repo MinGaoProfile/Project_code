@@ -31,7 +31,9 @@ surface = ["scikit-image>=0.23,<1"]
 [project.scripts]
 rnv-train = "rnv_seg.cli:train_main"
 rnv-evaluate = "rnv_seg.cli:evaluate_main"
+rnv-calibrate = "rnv_seg.cli:calibrate_main"
 rnv-infer = "rnv_seg.cli:infer_main"
+rnv-preview = "rnv_seg.cli:preview_main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

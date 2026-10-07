@@ -1,4 +1,3 @@
-from .segmentation import CombinedSegmentationLoss, build_loss
+from .segmentation import CombinedSegmentationLoss, MultiTaskSegmentationLoss, build_loss
 
-__all__ = ["CombinedSegmentationLoss", "build_loss"]
-
+__all__ = ["CombinedSegmentationLoss", "MultiTaskSegmentationLoss", "build_loss"]

@@ -1,0 +1,43 @@
+defaults:
+  - ../base.yaml
+
+project:
+  experiment_name: unet3d_multimodal_vasculature
+
+data:
+  modalities: [oct, octa, large_vessel]
+  target_names: [rnv, vasculature]
+  mat_variables:
+    vasculature_target: vasculature_mask
+  require_vasculature_within_rnv: true
+
+model:
+  name: multitask_unet3d
+  output_heads: [rnv, vasculature]
+
+loss:
+  tasks:
+    rnv:
+      weight: 1.0
+      components:
+        dice: 1.0
+        bce: 1.0
+        focal_tversky: 1.0
+    vasculature:
+      weight: 0.5
+      components:
+        dice: 1.0
+        focal_tversky: 1.0
+  consistency_weight: 0.1
+  consistency_parent: rnv
+  consistency_child: vasculature
+
+inference:
+  mat_variables:
+    rnv: mask
+    vasculature: vasculature_mask
+  postprocessing:
+    vasculature:
+      minimum_3d_component_voxels: 10
+      minimum_consecutive_bscans: 2
+      connectivity_3d: 26

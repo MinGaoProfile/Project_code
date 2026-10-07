@@ -6,7 +6,7 @@ model:
   out_channels: 1
   base_channels: 16
   levels: 4
-  dropout: 0.1
+  dropout: 0.15
   fusion: concatenation
   attention_heads: 4
   octcube:

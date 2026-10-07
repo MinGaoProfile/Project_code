@@ -6,4 +6,3 @@ data:
   modalities: [oct]
 model:
   name: unet3d
-

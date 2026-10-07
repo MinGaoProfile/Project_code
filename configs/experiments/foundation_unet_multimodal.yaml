@@ -3,11 +3,13 @@ defaults:
 project:
   experiment_name: foundation_unet_multimodal
 data:
-  modalities: [oct, octa, artery, vein]
+  modalities: [oct, octa, large_vessel]
 model:
   name: foundation_unet3d
+  # Preserve compatibility with the external legacy ConvBlock encoder checkpoint.
+  base_channels: 16
+  levels: 4
   foundation_checkpoint: ${RNV_FOUNDATION_CHECKPOINT:-}
   require_foundation_checkpoint: true
   freeze_encoder: true
   minimum_checkpoint_coverage: 0.7
-

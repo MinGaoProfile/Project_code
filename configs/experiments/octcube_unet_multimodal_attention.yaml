@@ -5,11 +5,10 @@ project:
   experiment_name: octcube_unet_multimodal_attention
 
 data:
-  modalities: [oct, octa, artery, vein]
+  modalities: [oct, octa, large_vessel]
 
 model:
   fusion: attention
   attention_heads: 4
   octcube:
     train_mode: frozen
-

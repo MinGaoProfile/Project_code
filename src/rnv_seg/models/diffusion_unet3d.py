@@ -21,8 +21,8 @@ class DiffusionUNet3D(nn.Module):
         self,
         in_channels: int,
         out_channels: int = 1,
-        base_channels: int = 16,
-        levels: int = 4,
+        base_channels: int = 24,
+        levels: int = 5,
         dropout: float = 0.0,
         diffusion_steps: int = 50,
         diffusion_loss_weight: float = 0.2,
@@ -64,4 +64,3 @@ class DiffusionUNet3D(nn.Module):
         refined = (probability - (1.0 - alpha_bar).sqrt() * predicted_noise) / alpha_bar.sqrt()
         refined_logits = torch.logit(refined.clamp(1.0e-4, 1.0 - 1.0e-4))
         return SegmentationOutput(logits=0.5 * (coarse_logits + refined_logits))
-

@@ -5,10 +5,9 @@ project:
   experiment_name: octcube_unet_multimodal
 
 data:
-  modalities: [oct, octa, artery, vein]
+  modalities: [oct, octa, large_vessel]
 
 model:
   fusion: concatenation
   octcube:
     train_mode: frozen
-

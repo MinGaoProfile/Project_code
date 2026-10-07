@@ -7,7 +7,7 @@ seed: 42
 deterministic: true
 
 data:
-  dataset_root: ${RNV_DATASET_ROOT:-/path/to/RNV_dataset}
+  dataset_root: ${RNV_DATASET_ROOT:-/mnt/i/WSL_Workspace/RNV_segmentation/Dataset}
   train_split: train_data
   validation_split: null
   test_split: test_data
@@ -27,32 +27,201 @@ data:
   percentile_range: [0.5, 99.5]
   validation_fraction: 0.2
   split_group: subject
-  split_version: v1
+  split_version: v3_subject_lesion_size_stratified
+  validation_stratification:
+    enabled: true
+    # Folder names expose acquisition field codes (for example F120/F122), not
+    # trustworthy anatomical quadrant names. Preserve every available field code.
+    field_code_regex: '(?:^|[-_])(F\d{3})(?:[_-]|$)'
+    # Frozen median of the largest eligible 3D component in 112 positive scans.
+    # 36,586 voxels ~= 0.0247 mm3 at the configured physical spacing.
+    large_component_voxels: 36586
+    connectivity: 26
+    minimum_voxels: 30
+    search_trials: 10000
+    # Keep the available completely negative scan represented in validation.
+    required_validation_strata: [presence:negative]
+  lesion_size_groups:
+    large_component_voxels: 36586
+    connectivity: 26
+    minimum_voxels: 30
   vessel_prior:
     filename_suffix: _inner_octa_mask.png
-    artery_channel: 0
-    vein_channel: 1
+    # RGB color mask: blue belongs to both artery and vein priors.
+    artery_channels: [0, 2]
+    vein_channels: [1, 2]
+    binary_threshold: 0.0
+    minimum_component_pixels: 30
+    component_connectivity: 8
     depth_axis: 0
     alignment: exact
-  patch_size: [64, 128, 128]
-  foreground_patch_probability: 0.7
+  # Shared BM/RNV-guided training crop used by every experiment.
+  patch_size: [480, 224, 24]
   samples_per_volume: 1
   num_workers: 4
   pin_memory: true
+  random_flip_axes: [1, 2]
+  random_flip_probability: 0.5
+  intensity_augmentation:
+    enabled: true
+    contrast:
+      probability: 0.5
+      range: [0.8, 1.2]
+    gaussian_noise:
+      probability: 0.3
+      std_range: [0.0, 0.05]
+  curve_roi:
+    enabled: true
+    variable: ManualCurveData
+    # Shift the ILM upward so it remains 20 px above the highest RNV point.
+    ilm_layer: 1
+    bm_layer: 8
+    coordinate_base: 1
+    rnv_top_margin_pixels: 20
+    # Put the RNV depth anchor at ~1/3 of the patch, shifting the crop downward.
+    rnv_depth_position_fraction: 0.40
+    # Shift the BM downward by 100 px; the curved region between both surfaces is ROI.
+    bm_bottom_margin_pixels: 100
+    required: true
+  lesion_sampling:
+    enabled: true
+    connectivity: 26
+    minimum_voxels: 30
+    component_overlap: 0.5
+    # Training-only multi-view expansion around each eligible 3D RNV component.
+    positive_views:
+      enabled: true
+      lateral_offset_fraction: 0.25
+      bscan_offset_fraction: 0.25
+      complete_minimum_coverage: 0.8
+      boundary_minimum_coverage: 0.2
+      maximum_views_per_component: 6
+      maximum_views_per_case: 20
+  # After RNV-guided windows, sample spatially representative non-overlapping ROI windows.
+  roi_sliding_window:
+    enabled: true
+    overlap: 0.0
+  balanced_patch_sampling:
+    enabled: true
+    # Validation uses complete scans through the inference pipeline, never patch indexing.
+    validation_enabled: false
+    positive_fraction: 0.5
+    # Increase shifted boundary/context views to learn low-confidence lesion margins.
+    positive_category_fractions:
+      complete: 0.55
+      boundary: 0.45
+    # Emphasize early/small-only RNV while retaining large-lesion shape learning.
+    positive_scan_group_fractions:
+      small_only: 0.7
+      large_containing: 0.3
+    # Rotate augmented views instead of repeatedly sampling the same lesion in one epoch.
+    maximum_positive_views_per_lesion_per_epoch: 2
+    # Keep lesion-boundary negatives while covering all scan records and spatial slots.
+    # Do not infer macula from retinal thickness: temporal retina may also be thin.
+    negative_category_fractions:
+      adjacent: 0.3
+      anatomical_coverage: 0.7
+    adjacent_margin_pixels: [0, 152, 24]
+    # Alternative top/centre/bottom and left/centre/right positions per B-scan slot.
+    spatial_phases: [0.0, 0.5, 1.0]
+    hard_negative_fraction: 0.5
+    # Replay low-confidence labelled RNV in 30% of positive slots; the total
+    # positive:negative batch ratio remains exactly 1:1.
+    hard_positive_fraction: 0.3
+    hard_positive_mining:
+      enabled: true
+      warmup_epochs: 3
+      refresh_every: 1
+      candidate_limit: 256
+      scoring_batch_size: 1
+      recheck_fraction: 0.5
+      probability_threshold: 0.45
+      minimum_missed_voxels: 10
+      minimum_missed_fraction: 0.05
+      contrast_ring_radius: 4
+      missed_fraction_weight: 0.5
+      confidence_shortfall_weight: 0.3
+      low_contrast_weight: 0.2
+      small_only_bonus: 0.15
+      boundary_bonus: 0.10
+      maximum_pool_size: 256
+      maximum_per_case: 12
+      maximum_per_lesion: 3
+      maximum_views_per_lesion_per_epoch: 3
+      score_decay: 0.9
+      minimum_retained_score: 0.15
+    hard_negative_mining:
+      enabled: true
+      strategy_version: patch_plus_full_volume_v2
+      warmup_epochs: 8
+      refresh_every: 2
+      candidate_limit: 512
+      scoring_batch_size: 1
+      # Recheck part of the existing pool while reserving most capacity for discovery.
+      recheck_fraction: 0.25
+      # Include persistent near-miss predictions before they cross the 0.5 test threshold.
+      probability_threshold: 0.4
+      minimum_false_positive_voxels: 20
+      # Ignore isolated predictions that test-time postprocessing would remove.
+      use_inference_postprocessing: true
+      maximum_pool_size: 768
+      maximum_per_case: 16
+      top_probability_voxels: 4096
+      voxel_count_weight: 0.35
+      # Age stale entries so old model errors do not remain hard forever.
+      score_decay: 0.9
+      minimum_retained_score: 0.35
+      # Periodically infer complete labelled training scans and map persistent
+      # false-positive components back to existing pure-negative patch coordinates.
+      # Validation scans are never used to update this pool.
+      full_volume_refresh:
+        enabled: true
+        warmup_epochs: 8
+        refresh_every: 4
+        cases_per_refresh: 4
+        probability_threshold: 0.5
+  # OCTA-guided pseudo-label generation is constrained by the structural RNV mask.
+  vascular_label_generation:
+    crop_margin_pixels: 8
+    denoise_sigma: [0.8, 0.6, 0.6]
+    background_sigma: [4.0, 2.0, 2.0]
+    normalization_percentiles: [5.0, 99.0]
+    intensity_weight: 0.7
+    threshold_method: otsu_hysteresis
+    low_otsu_scale: 1.0
+    minimum_low_score: 0.12
+    minimum_high_score: 0.25
+    low_quantile: 0.6
+    high_quantile: 0.85
+    minimum_structural_component_voxels: 10
+    minimum_vascular_component_voxels: 5
+  sample_preview:
+    enabled: true
+    # Three distinct lesion/case previews plus one pure-negative preview.
+    count: 4
+    positive_count: 3
+    negative_count: 1
+    bscan_slices: 4
 
 model:
   name: unet3d
   in_channels: auto
   out_channels: 1
-  base_channels: 16
-  levels: 4
+  # The 24-channel model performed better than the reduced 16-channel ablation.
+  base_channels: 24
+  levels: 5
   dropout: 0.1
 
 loss:
   components:
     dice: 1.0
     bce: 1.0
+    focal_tversky: 1.0
   smooth: 1.0e-6
+  # Penalize false positives more strongly to reduce normal-macula detections.
+  focal_tversky_alpha: 0.6
+  focal_tversky_beta: 0.4
+  focal_tversky_gamma: 0.75
 
 optimizer:
   name: adamw
@@ -60,34 +229,95 @@ optimizer:
   weight_decay: 1.0e-5
 
 scheduler:
-  name: cosine
+  name: reduce_on_plateau
+  monitor: validation_loss
+  mode: min
+  factor: 0.5
+  patience: 5
+  # Smooth noisy case-mean full-volume loss before changing LR.
+  smoothing_window: 3
+  threshold: 2.0e-3
+  threshold_mode: abs
+  cooldown: 0
   minimum_learning_rate: 1.0e-6
 
 training:
   epochs: 200
-  batch_size: 1
-  gradient_accumulation_steps: 1
+  # Keep the physical balanced batch at 2 (one positive + one negative) and
+  # accumulate two microbatches for an effective batch size of 4. CUDA AMP
+  # lowers activation memory while float32 master weights preserve stability.
+  batch_size: 2
+  gradient_accumulation_steps: 2
   amp: true
   gradient_clip_norm: 1.0
   validate_every: 1
-  checkpoint_metric: dice
-  checkpoint_mode: max
-  early_stopping_patience: 30
+  checkpoint_metric: validation_loss
+  checkpoint_mode: min
+  checkpoint_min_delta: 2.0e-3
+  checkpoint_strategy: full_volume_loss_v3
+  # Every epoch uses complete validation scans processed with the same sliding
+  # windows and cleanup as test inference.
+  full_volume_checkpoint:
+    enabled: true
+    every_n_epochs: 1
+    metric: validation_loss
+    mode: min
+    # The default/final model is selected only by complete-volume validation loss.
+    # Stratified Dice/F1 remain diagnostics and never control checkpoints, LR, or stopping.
+    preferred_metric: validation_loss
+    preferred_mode: min
+    preferred_min_delta: 2.0e-3
+    selection_metric_weights:
+      small_only_dice: 0.35
+      small_only_lesion_f1: 0.30
+      large_containing_dice: 0.25
+      negative_clean_rate: 0.10
+    evaluate_at_training_end: true
+  # Allows one LR reduction plus several lower-LR epochs without spending many
+  # additional epochs after the full-volume validation loss has stopped improving.
+  early_stopping_patience: 18
 
 inference:
-  threshold: 0.5
+  # Slightly favor lesion-boundary sensitivity; postprocessing still suppresses
+  # isolated regions smaller than 30 px or shorter than five B-scans.
+  threshold: 0.50
   sliding_window_overlap: 0.5
-  save_probabilities: false
+  # Store the float32 sigmoid volume so thresholds can be reviewed without rerunning inference.
+  save_probabilities: False
+  probability_heatmaps:
+    enabled: true
+    bscan_count: 6
+    overlay_alpha: 0.70
+  # Testing never reads layer curves: use complete B-scans and slide along their sequence.
+  patch_size: [768, 600, 24]
+  output_format: mat
+  mat_variable: mask
+  mat_compression: true
+  postprocessing:
+    enabled: true
+    minimum_2d_component_pixels: 30
+    minimum_consecutive_bscans: 5
+    connectivity_2d: 8
+    connectivity_3d: 26
+  calibration:
+    thresholds: [0.45, 0.50, 0.55, 0.60, 0.65]
+    minimum_2d_component_pixels: [5, 10, 20, 30]
+    minimum_consecutive_bscans: [3, 5, 7]
+    minimum_lesion_sensitivity: 0.82
+    selection_metric_weights:
+      positive_dice: 0.5
+      lesion_f1: 0.5
 
 metrics:
   voxel: [dice, iou, precision, recall, specificity]
   lesion:
     enabled: true
     connectivity: 26
-    minimum_voxels: 3
+    minimum_voxels: 30
     match_iou: 0.1
   volume:
-    voxel_spacing_mm: [1.0, 1.0, 1.0]
+    # Physical OCT voxel size: [depth, width, B-scan] = [3, 15, 15] um.
+    voxel_spacing_mm: [0.003, 0.015, 0.015]
   surface:
     enabled: false
     tolerance_mm: 0.05

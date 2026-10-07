@@ -6,6 +6,7 @@ import torch
 from torch import nn
 
 from rnv_seg.models import build_model
+from rnv_seg.models.unet3d import ResidualConvBlock
 
 
 @pytest.mark.parametrize("name", ["unet3d", "diffusion_unet3d", "foundation_unet3d"])
@@ -28,6 +29,43 @@ def test_model_contract(name: str) -> None:
     output = model(image, target)
     assert output.logits.shape == target.shape
     (output.logits.mean() + sum(output.auxiliary_losses.values())).backward()
+
+
+def test_multitask_unet_has_independent_rnv_and_vasculature_heads() -> None:
+    model = build_model(
+        {
+            "name": "multitask_unet3d",
+            "output_heads": ["rnv", "vasculature"],
+            "base_channels": 4,
+            "levels": 2,
+        },
+        in_channels=3,
+    )
+    output = model(torch.randn(1, 3, 8, 8, 8))
+    assert output.logits.shape == (1, 2, 8, 8, 8)
+    assert set(model.heads) == {"rnv", "vasculature"}
+    assert model.heads["rnv"].weight.data_ptr() != model.heads["vasculature"].weight.data_ptr()
+
+
+def test_unet_uses_projected_residual_blocks_and_five_levels() -> None:
+    model = build_model(
+        {
+            "name": "unet3d",
+            "out_channels": 1,
+            "base_channels": 4,
+            "levels": 5,
+            "dropout": 0.0,
+        },
+        in_channels=2,
+    )
+    assert len(model.encoder) == 5
+    assert len(model.decoder) == 4
+    assert all(isinstance(block, ResidualConvBlock) for block in model.encoder)
+    assert all(isinstance(block, ResidualConvBlock) for block in model.decoder)
+    assert isinstance(model.encoder[0].shortcut[0], nn.Conv3d)
+
+    output = model(torch.randn(1, 2, 33, 32, 32))
+    assert output.logits.shape == (1, 1, 33, 32, 32)
 
 
 @pytest.mark.parametrize("fusion", ["concatenation", "addition", "attention", "cross_modal"])
@@ -54,9 +92,9 @@ def test_octcube_multimodal_model_contract(fusion: str) -> None:
             "normalization": "octcube_fixed",
         },
     }
-    modalities = ["oct", "octa", "artery", "vein"]
-    model = build_model(config, in_channels=4, modalities=modalities)
-    image = torch.rand(1, 4, 8, 16, 16)
+    modalities = ["oct", "octa", "large_vessel"]
+    model = build_model(config, in_channels=3, modalities=modalities)
+    image = torch.rand(1, 3, 8, 16, 16)
     target = (torch.rand(1, 1, 8, 16, 16) > 0.9).float()
     output = model(image, target)
     assert output.logits.shape == target.shape

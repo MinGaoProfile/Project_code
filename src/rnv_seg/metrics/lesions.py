@@ -14,11 +14,6 @@ def _structure(connectivity: int) -> np.ndarray:
     raise ValueError("Connectivity must be 6, 18, or 26")
 
 
-def _components(mask: np.ndarray, connectivity: int, minimum_voxels: int) -> list[np.ndarray]:
-    labels, count = ndimage.label(np.asarray(mask, dtype=bool), structure=_structure(connectivity))
-    return [labels == index for index in range(1, count + 1) if int((labels == index).sum()) >= minimum_voxels]
-
-
 def lesion_metrics(
     prediction: np.ndarray,
     target: np.ndarray,
@@ -26,13 +21,34 @@ def lesion_metrics(
     minimum_voxels: int = 3,
     match_iou: float = 0.1,
 ) -> dict[str, float]:
-    predicted = _components(prediction, connectivity, minimum_voxels)
-    actual = _components(target, connectivity, minimum_voxels)
+    structure = _structure(connectivity)
+    predicted_labels, predicted_count = ndimage.label(
+        np.asarray(prediction, dtype=bool), structure=structure
+    )
+    target_labels, target_count = ndimage.label(np.asarray(target, dtype=bool), structure=structure)
+    predicted_sizes = np.bincount(predicted_labels.ravel(), minlength=predicted_count + 1)
+    target_sizes = np.bincount(target_labels.ravel(), minlength=target_count + 1)
+    valid_predicted = set(
+        int(index) for index in np.flatnonzero(predicted_sizes[1:] >= minimum_voxels) + 1
+    )
+    valid_target = set(int(index) for index in np.flatnonzero(target_sizes[1:] >= minimum_voxels) + 1)
+
     candidates: list[tuple[float, int, int]] = []
-    for pred_index, pred in enumerate(predicted):
-        for target_index, truth in enumerate(actual):
-            intersection = float(np.logical_and(pred, truth).sum())
-            union = float(np.logical_or(pred, truth).sum())
+    overlap = (predicted_labels > 0) & (target_labels > 0)
+    if overlap.any():
+        multiplier = int(target_count) + 1
+        pairs = (
+            predicted_labels[overlap].astype(np.int64) * multiplier
+            + target_labels[overlap].astype(np.int64)
+        )
+        pair_codes, intersections = np.unique(pairs, return_counts=True)
+        for code, intersection_count in zip(pair_codes, intersections, strict=True):
+            pred_index = int(code // multiplier)
+            target_index = int(code % multiplier)
+            if pred_index not in valid_predicted or target_index not in valid_target:
+                continue
+            intersection = float(intersection_count)
+            union = float(predicted_sizes[pred_index] + target_sizes[target_index] - intersection_count)
             iou = intersection / union if union else 0.0
             if iou >= match_iou:
                 candidates.append((iou, pred_index, target_index))
@@ -43,10 +59,10 @@ def lesion_metrics(
             matched_pred.add(pred_index)
             matched_target.add(target_index)
     tp = len(matched_target)
-    fp = len(predicted) - tp
-    fn = len(actual) - tp
-    sensitivity = tp / len(actual) if actual else float(not predicted)
-    precision = tp / len(predicted) if predicted else float(not actual)
+    fp = len(valid_predicted) - tp
+    fn = len(valid_target) - tp
+    sensitivity = tp / len(valid_target) if valid_target else float(not valid_predicted)
+    precision = tp / len(valid_predicted) if valid_predicted else float(not valid_target)
     f1 = 2.0 * precision * sensitivity / (precision + sensitivity) if precision + sensitivity else 0.0
     return {
         "lesion_sensitivity": float(sensitivity),
@@ -54,7 +70,6 @@ def lesion_metrics(
         "lesion_f1": float(f1),
         "false_positive_lesions": float(fp),
         "detected_lesions": float(tp),
-        "target_lesions": float(len(actual)),
+        "target_lesions": float(len(valid_target)),
         "missed_lesions": float(fn),
     }
-

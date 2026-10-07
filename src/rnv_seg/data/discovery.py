@@ -19,6 +19,11 @@ class ScanRecord:
     segmentation_path: Path | None
     vessel_map_path: Path | None
 
+    @property
+    def case_id(self) -> str:
+        """Return the normalized human-readable case identifier used in local logs."""
+        return self.subject_id.lower()
+
     def safe_dict(self) -> dict[str, str | None]:
         """Return fields suitable for local, Git-ignored manifests."""
         raw = asdict(self)

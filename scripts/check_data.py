@@ -76,7 +76,7 @@ def main() -> int:
         errors.append(f"{invalid_train_folders} training folders have missing/duplicate image or target files")
     if invalid_test_folders:
         errors.append(f"{invalid_test_folders} test folders have missing/duplicate image files")
-    vessel_modalities = {"artery", "vein"} & set(data["modalities"])
+    vessel_modalities = {"artery", "vein", "large_vessel"} & set(data["modalities"])
     missing_test_vessels = 0
     if vessel_modalities:
         missing_test_vessels = sum(record.vessel_map_path is None for record in test)
@@ -96,11 +96,13 @@ def main() -> int:
                 errors.append(f"Missing image variable {name} in sample {record.sample_id}")
             else:
                 image_shapes.add(image_vars[name][0])
-        target_name = variables_config["target"]
-        if target_name not in target_vars:
-            errors.append(f"Missing target variable {target_name} in sample {record.sample_id}")
-        else:
-            target_shapes.add(target_vars[target_name][0])
+        for target in data.get("target_names", ["rnv"]):
+            key = "target" if target == "rnv" else f"{target}_target"
+            target_name = variables_config[key]
+            if target_name not in target_vars:
+                errors.append(f"Missing target variable {target_name} in sample {record.sample_id}")
+            else:
+                target_shapes.add(target_vars[target_name][0])
         if vessel_modalities:
             if record.vessel_map_path is None:
                 errors.append(f"Missing vessel prior for sample {record.sample_id}")

@@ -56,5 +56,46 @@ def apply_random_flips(
         if rng.random() < probability:
             image = np.flip(image, axis=spatial_axis + 1)
             if target is not None:
-                target = np.flip(target, axis=spatial_axis)
+                target = np.flip(target, axis=spatial_axis + target.ndim - 3)
     return np.ascontiguousarray(image), None if target is None else np.ascontiguousarray(target)
+
+
+def apply_intensity_augmentations(
+    image: np.ndarray,
+    rng: np.random.Generator,
+    channels: Sequence[int],
+    *,
+    contrast_probability: float = 0.5,
+    contrast_range: Sequence[float] = (0.8, 1.2),
+    noise_probability: float = 0.3,
+    noise_std_range: Sequence[float] = (0.0, 0.05),
+    spatial_mask: np.ndarray | None = None,
+) -> np.ndarray:
+    """Apply contrast and Gaussian-noise augmentation to intensity channels only."""
+    output = np.asarray(image, dtype=np.float32).copy()
+    contrast_low, contrast_high = (float(value) for value in contrast_range)
+    noise_low, noise_high = (float(value) for value in noise_std_range)
+    if not 0 <= contrast_probability <= 1 or not 0 <= noise_probability <= 1:
+        raise ValueError("Augmentation probabilities must be in [0, 1]")
+    if contrast_low <= 0 or contrast_high < contrast_low:
+        raise ValueError("contrast_range must be positive and ordered")
+    if noise_low < 0 or noise_high < noise_low:
+        raise ValueError("noise_std_range must be non-negative and ordered")
+    mask = None if spatial_mask is None else np.asarray(spatial_mask, dtype=bool)
+    for channel in channels:
+        values = output[int(channel)]
+        if rng.random() < contrast_probability:
+            factor = float(rng.uniform(contrast_low, contrast_high))
+            selected = values if mask is None else values[mask]
+            mean = float(selected.mean()) if selected.size else 0.0
+            values = np.clip((values - mean) * factor + mean, 0.0, 1.0)
+        if rng.random() < noise_probability:
+            standard_deviation = float(rng.uniform(noise_low, noise_high))
+            noise = rng.normal(0.0, standard_deviation, size=values.shape).astype(
+                np.float32
+            )
+            values = np.clip(values + noise, 0.0, 1.0)
+        if mask is not None:
+            values = np.where(mask, values, 0.0)
+        output[int(channel)] = values
+    return np.ascontiguousarray(output)
